@@ -10,7 +10,7 @@ var player: Player; var boss: Boss; var cam: Camera3D; var torches = []; var snd
 var sun; var env; var cine: Cine; var quality = 2; var dimmed = false; var intro_done = false
 var logo: TextureRect; var cap_l: Label; var bars_t: ColorRect; var bars_b: ColorRect; var skip_l: Label; var sp_bar
 var ui: CanvasLayer; var hp_bar; var st_bar; var boss_bar; var info: Label; var sub: Label; var bname: Label
-var ov: ColorRect; var ov_label: Label; var ov_btn: Button; var on_btn: Callable
+var ov: ColorRect; var ov_label: Label; var ov_btn: Button; var on_btn: Callable; var weapon_panel: VBoxContainer
 
 func _ready():
 	randomize()
@@ -95,6 +95,16 @@ func _decor():
 	var lf = CPUParticles3D.new(); lf.amount = 40; lf.lifetime = 10.0; lf.preprocess = 10.0; lf.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX; lf.emission_box_extents = Vector3(12, .5, 12); lf.position.y = 9
 	lf.gravity = Vector3(.3, -.7, 0); lf.initial_velocity_max = .3; lf.angular_velocity_max = 180.0; var qm = QuadMesh.new(); qm.size = Vector2(.14, .1); lf.mesh = qm
 	var lm = Models.mat(Color(.4, .5, .2)); lm.cull_mode = BaseMaterial3D.CULL_DISABLED; lf.material_override = lm; add_child(lf)
+	var path_mat = Models.mat(Color(.26, .2, .16))
+	for i in range(9):
+		var stone = Models.part(self, Models.box(1.45, .08, .8), Color(.3, .27, .25), Vector3(0, .03, 7.6 - i * 1.65))
+		stone.rotation.y = randf_range(-.12, .12)
+	for side in [-1, 1]:
+		for i in range(5):
+			var bed = Models.part(self, Models.box(2.0, .12, .9), path_mat, Vector3(side * 6.0, .08, 5.5 - i * 2.5))
+			bed.rotation.y = randf_range(-.08, .08)
+			for crop in range(3):
+				Models.part(self, Models.sph(.12), Color(.25, .52, .18), bed.position + Vector3(-.55 + crop * .55, .22, randf_range(-.2, .2))).scale = Vector3(.7, 1.5, .7)
 
 func bar(col, pos, size):
 	var b = ProgressBar.new(); b.max_value = 1.0; b.value = 1.0; b.show_percentage = false; b.position = pos; b.size = size; b.custom_minimum_size = size
@@ -120,6 +130,12 @@ func _ui():
 	if ResourceLoader.exists("res://logo.svg"): logo.texture = load("res://logo.svg")
 	vb.add_child(logo)
 	ov_label = Label.new(); ov_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; ov_label.add_theme_font_size_override("font_size", 22); vb.add_child(ov_label)
+	weapon_panel = VBoxContainer.new(); weapon_panel.add_theme_constant_override("separation", 6); vb.add_child(weapon_panel)
+	var weapon_title = Label.new(); weapon_title.text = "ELIGE TU ARMA  ·  puedes cambiarla con 1 / 2 / 3"; weapon_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER; weapon_title.add_theme_font_size_override("font_size", 18); weapon_panel.add_child(weapon_title)
+	for key in ["espada", "hacha", "podadera"]:
+		var weapon_button = Button.new(); weapon_button.text = str(key).capitalize() + "  —  " + Cfg.W[key].name; weapon_button.focus_mode = Control.FOCUS_NONE
+		weapon_button.pressed.connect(func(k = key): player.switch(k); say(Cfg.W[k].name))
+		weapon_panel.add_child(weapon_button)
 	ov_btn = Button.new(); ov_btn.focus_mode = Control.FOCUS_NONE; ov_btn.add_theme_font_size_override("font_size", 22); vb.add_child(ov_btn)
 	var sb = StyleBoxFlat.new(); sb.bg_color = Color(.08, .07, .1); sb.border_color = Color(.75, .58, .3); sb.set_border_width_all(2); sb.set_content_margin_all(10); ov_btn.add_theme_stylebox_override("normal", sb)
 	var sh = sb.duplicate(); sh.bg_color = Color(.75, .58, .3); ov_btn.add_theme_stylebox_override("hover", sh); ov_btn.add_theme_color_override("font_hover_color", Color(.05, .05, .07))
@@ -127,6 +143,7 @@ func _ui():
 
 func overlay(txt, btn, cb: Callable):
 	ov_label.text = txt; ov_btn.text = btn; on_btn = cb; ov.visible = true; Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	weapon_panel.visible = false
 	logo.visible = false; ov.modulate.a = 0.0; create_tween().tween_property(ov, "modulate:a", 1.0, .35)
 
 func start_play():
@@ -146,6 +163,7 @@ func next_story():
 	var last = story_i == STORY.size() - 1
 	overlay(STORY[story_i] + ("\n\n" + CONTROLS if last else ""), "Enfrentar a Fuvu" if last else "Continuar", next_story)
 	logo.visible = story_i == 0
+	weapon_panel.visible = story_i == 1
 	story_i += 1
 
 func die():
@@ -205,7 +223,11 @@ func _process(dt):
 		else:
 			player.step(dt); boss.step(dt)
 			if player.hp <= 0: die()
-			elif boss.st == "dead" and boss.t <= 0: win()
+			elif boss.st == "dead" and boss.t <= 0:
+				if not boss.galileo:
+					await awaken_galileo()
+				else:
+					win()
 	player.animate(dt); boss.animate(dt)
 	if not dimmed:
 		for i in torches.size(): torches[i].light_energy = 1.4 + sin(clock * 12.0 + i) * .4
@@ -237,6 +259,14 @@ func _hud():
 	cap_l.position = Vector2(vp.x * .1, vp.y * .7); skip_l.position = Vector2(vp.x - 230, vp.y - 36)
 	sp_bar.visible = show and seed_bonus > 0; sp_bar.value = player.meter / 100.0
 	hp_bar.visible = show; st_bar.visible = show; boss_bar.visible = show; bname.visible = show; info.visible = show
-	hp_bar.value = player.hp / Cfg.P.hp; st_bar.value = player.st / Cfg.P.st; boss_bar.value = boss.hp / Cfg.B.hp
+	hp_bar.value = player.hp / Cfg.P.hp; st_bar.value = player.st / Cfg.P.st; boss_bar.value = boss.hp / (Cfg.G.hp if boss.galileo else Cfg.B.hp)
 	boss_bar.position = Vector2((vp.x - 620) / 2, vp.y - 44); bname.position = Vector2((vp.x - 300) / 2, vp.y - 80); sub.position = Vector2(vp.x / 2 - 200, vp.y * .16)
 	info.text = player.wd().name + "   Frascos " + "◆".repeat(player.fl) + "◇".repeat(Cfg.P.fl - player.fl) + ("   ◉ fijado" if player.lock else "") + ("   ✦ Pepino de Galileo" if seed_bonus > 0 else "")
+	bname.text = "Galileo, Señor de la Huerta" if boss.galileo else "Fuvu, Guardián del Pepino"
+
+func awaken_galileo():
+	mode = "cine"
+	boss.begin_galileo()
+	await cine.galileo_intro()
+	mode = "play"
+	say("Galileo, Señor de la Huerta, entra en combate.")

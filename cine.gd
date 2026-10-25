@@ -44,6 +44,16 @@ func victory():
 	await pepino()
 	g.cap("")
 
+func galileo_intro():
+	g.mode = "cine"; skip = false
+	var b = g.boss
+	g.dim(true); g.sfx("bell")
+	g.cap("GALILEO", "el dueño de la huerta")
+	await shot(b.position + Vector3(6, 3.0, 6), hd(b, 2.0), b.position + Vector3(4, 2.2, 4), hd(b, 2.8), 2.2)
+	g.cap("GALILEO", "«¡No toques mi pitulín! Así llamo al pepino de mi huerto.»")
+	await wait(2.6)
+	g.dim(false); g.cap(""); g.say("Fuvu solo era el guardián. La huerta acaba de despertar.")
+
 func pepino():
 	var p = g.player; var b = g.boss
 	var c = (p.position + b.position) * .5; c.y = 0.0

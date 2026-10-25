@@ -1,19 +1,31 @@
 class_name Boss extends Node3D
 var g
 var hp = 800.0; var st = "idle"; var t = 2.6; var an = ""; var w = 1.0; var hit = false; var ph = 1; var cb = false; var face = 0.0; var flash = 0.0
+var galileo = false
 var slide = 0.0; var recoil = 0.0; var step_t = 0.0; var pose_x = null
-var arm: Node3D; var body: Node3D; var club: StandardMaterial3D; var robe: StandardMaterial3D; var tele = {}
+var arm: Node3D; var body: Node3D; var club: StandardMaterial3D; var robe: StandardMaterial3D; var tele = {}; var galileo_body: Node3D; var galileo_arm: Node3D; var galileo_club: StandardMaterial3D
 
 func _ready():
 	var m = Models.fuvu(); body = m.root; arm = m.arm; club = m.club; robe = m.robe; add_child(body)
+	var gm = Models.galileo(); galileo_body = gm.root; galileo_arm = gm.arm; galileo_club = gm.club; galileo_body.visible = false; add_child(galileo_body)
 	for n in Cfg.A:
 		var a = Cfg.A[n]; var mi = MeshInstance3D.new()
 		mi.mesh = Models.sector(a.get("tR", a.R), deg_to_rad(a.get("tg", a.g)))
 		mi.material_override = Models.flat(Color(.85, .1, .1, 0)); mi.visible = false; mi.position.y = .06; add_child(mi); tele[n] = mi
+	for n in Cfg.GA:
+		var a = Cfg.GA[n]; var mi = MeshInstance3D.new()
+		mi.mesh = Models.sector(a.get("tR", a.R), deg_to_rad(a.get("tg", a.g)))
+		mi.material_override = Models.flat(Color(.7, .3, 1.0, 0)); mi.visible = false; mi.position.y = .06; add_child(mi); tele[n] = mi
 
 func reset():
-	hp = Cfg.B.hp; st = "idle"; t = 2.6; ph = 1; an = ""; cb = false; face = 0.0; position = Vector3(0, 0, -3)
-	pose_x = null; body.rotation.z = 0; body.position.y = 0; robe.albedo_color = Color(.12, .23, .17); robe.emission_enabled = false
+	galileo = false; hp = Cfg.B.hp; st = "idle"; t = 2.6; ph = 1; an = ""; cb = false; face = 0.0; position = Vector3(0, 0, -3)
+	pose_x = null; body.visible = true; galileo_body.visible = false; body.rotation.z = 0; body.position.y = 0; robe.albedo_color = Color(.12, .23, .17); robe.emission_enabled = false
+
+func begin_galileo():
+	galileo = true; hp = Cfg.G.hp; st = "trans"; t = 3.2; ph = 1; an = ""; cb = false; face = PI; position = Vector3(0, 0, -3)
+	body.visible = false; galileo_body.visible = true
+	g.say("«¡No toques mi pitulín! Así llamo al pepino de mi huerto.»")
+	g.sfx("bell")
 
 func stagger(d):
 	if st != "dead" and st != "trans":
@@ -28,12 +40,16 @@ func move(d):
 		position.x *= Cfg.ARENA / h; position.z *= Cfg.ARENA / h
 
 func pick(d):
+	if galileo:
+		var gl = ["embestida", "latigo"] if d > 7.5 else ["latigo", "pitulin", "latigo"]
+		return gl[randi() % gl.size()]
 	var l = ["embestida", "embestida", "tajo"] if d > 7.5 else ["tajo", "barrido", "tajo", "barrido"]
 	if ph > 1 and d < 7: l += ["repique", "repique"]
 	return l[randi() % l.size()]
 
 func attack(n, wm = 1.0):
-	an = n; st = "wind"; w = Cfg.A[n].w * wm * (0.85 if ph > 1 else 1.0); t = w; hit = false; g.sfx("wind", -4.0)
+	an = n; st = "wind"; var attacks = Cfg.GA if galileo else Cfg.A
+	w = attacks[n].w * wm * (0.85 if ph > 1 else 1.0); t = w; hit = false; g.sfx("wind", -4.0)
 
 func impact(a):
 	g.shake = .35; g.sfx("boom")
@@ -71,12 +87,12 @@ func step(dt):
 					step_t = .55; g.shake = max(g.shake, .08); g.sfx("step", -6.0)
 			if t <= 0 and (d < 8.5 or t < -1.0): attack(pick(d))
 		"wind":
-			var a = Cfg.A[an]
+			var a = (Cfg.GA if galileo else Cfg.A)[an]
 			if w - t < w * .35 and a.k != "ring": face = turn(face, want, 2.2 * dt)
 			if t <= 0:
 				st = "act"; t = a.a; impact(a)
 		"act":
-			var a = Cfg.A[an]
+			var a = (Cfg.GA if galileo else Cfg.A)[an]
 			if a.k == "dash": move(a.v * dt)
 			if not hit:
 				var da = abs(angle_difference(face, want)); var h = false
@@ -85,7 +101,7 @@ func step(dt):
 				else: h = d < a.R and da < deg_to_rad(a.g)
 				if h and g.player.hurt(a.d): hit = true
 			if t <= 0:
-				if an == "tajo" and ph > 1 and not cb and randf() < .45:
+				if not galileo and an == "tajo" and ph > 1 and not cb and randf() < .45:
 					cb = true; attack("barrido", .7)
 				else:
 					cb = false; st = "rec"; t = a.r; slide = a.v * .4 if a.k == "dash" else 0.0
@@ -103,19 +119,25 @@ func animate(dt):
 	if an != "" and (st == "wind" or st == "act" or st == "rec"):
 		var wd = st == "wind"
 		match an:
-			"tajo": tx = -2.3 if wd else .9
+			"tajo", "latigo": tx = -2.3 if wd else .9
 			"barrido":
 				tx = 0.0; ty = 1.7 if wd else -1.7
 			"embestida": tx = -.5 if wd else 0.0
+			"pitulin": tx = -1.6 if wd else .6
 			_: tx = -1.6 if wd else .6
 	if pose_x != null: tx = pose_x
 	var rt = min(dt * (30.0 if st == "act" else 5.0), 1.0)
 	arm.rotation.x = lerpf(arm.rotation.x, tx, rt); arm.rotation.y = lerpf(arm.rotation.y, ty, rt)
-	body.position.y = lerpf(body.position.y, -1.2 if st == "dead" else 0.0, min(dt * 3.0, 1.0))
-	recoil = move_toward(recoil, 0.0, dt * 3.0); body.position.z = -recoil; body.rotation.x = -recoil * .25
-	body.rotation.z = lerpf(body.rotation.z, .9 if st == "dead" else sin(Time.get_ticks_msec() * .004) * .025, min(dt * 2.0, 1.0))
-	club.emission_enabled = true
-	club.emission = Color.WHITE if flash > 0 else (Color(.7 * (1.0 - t / w), 0, 0) if st == "wind" else Color.BLACK)
+	var active_body = galileo_body if galileo else body
+	var active_arm = galileo_arm if galileo else arm
+	var active_club = galileo_club if galileo else club
+	active_body.position.y = lerpf(active_body.position.y, -1.2 if st == "dead" else 0.0, min(dt * 3.0, 1.0))
+	recoil = move_toward(recoil, 0.0, dt * 3.0); active_body.position.z = -recoil; active_body.rotation.x = -recoil * .25
+	active_body.rotation.z = lerpf(active_body.rotation.z, .9 if st == "dead" else sin(Time.get_ticks_msec() * .004) * .025, min(dt * 2.0, 1.0))
+	active_arm.rotation.x = lerpf(active_arm.rotation.x, tx, rt)
+	active_arm.rotation.y = lerpf(active_arm.rotation.y, ty, rt)
+	active_club.emission_enabled = true
+	active_club.emission = Color.WHITE if flash > 0 else (Color(.7 * (1.0 - t / w), 0, 0) if st == "wind" else Color.BLACK)
 	for n in tele:
 		var on = an == n and (st == "wind" or st == "act")
 		tele[n].visible = on
