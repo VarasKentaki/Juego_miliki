@@ -32,8 +32,17 @@ Movimiento con inercia, impulso al atacar, retroceso al recibir daño, capa y bu
 ## Modelos 3D externos (opcional)
 Si existen `models/miliki.glb` o `models/fuvu.glb`, el juego los usa en lugar de los procedurales (ajusta la escala en `Cfg.EXT`). Fuentes con licencia CC0: Kenney, Quaternius, KayKit y Poly Haven. Poly Pizza es mayoritariamente CC-BY (hay que dar crédito). Comprueba siempre la licencia de cada archivo y apúntala en CREDITS.md.
 
+## Exportar a web sin abrir Godot
+Con Godot 4.3+ instalado, ejecuta:
+
+```bash
+./export_web.sh
+```
+
+El script valida el proyecto y regenera `Miliki y el Pepino.html`, junto con su `.pck` y `.wasm`.
+
 ## Exportar a Windows
 Proyecto → Exportar → Windows Desktop. Sin firma digital, SmartScreen puede avisar.
 
 ## Estado
-Sin probar dentro de Godot. Ver `documentation/PRUEBAS.md`.
+Sin probar dentro de Godot en este entorno. Ver `documentation/PRUEBAS.md`.

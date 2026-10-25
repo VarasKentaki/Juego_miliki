@@ -85,6 +85,25 @@ static func fuvu() -> Dictionary:
 	external(r, "res://models/fuvu.glb", [arm], Cfg.EXT.fuvu)
 	return {"root": r, "arm": arm, "club": club.material_override, "robe": body.material_override}
 
+static func galileo() -> Dictionary:
+	var r = Node3D.new()
+	var robe = part(r, cone(1.3, 3.4), Color(.22, .12, .3), Vector3(0, 1.7, 0))
+	part(r, tor(.65, .8), Color(.82, .58, .2), Vector3(0, 2.05, 0))
+	part(r, sph(.56), Color(.78, .68, .52), Vector3(0, 3.35, 0))
+	var hm = SphereMesh.new(); hm.radius = .56; hm.height = .56; hm.is_hemisphere = true
+	part(r, hm, Color(.14, .07, .18), Vector3(0, 3.6, -.08))
+	face(r, 3.35, .42, 2.0, Color(.4, .9, 1), true)
+	for k in [-1, 1]:
+		part(r, cyl(.06, .08, 1.4), Color(.78, .68, .52), Vector3(.45 * k, 2.55, 0)).rotation.z = -.35 * k
+	var arm = Node3D.new(); arm.position = Vector3(.9, 2.4, 0); r.add_child(arm)
+	part(arm, cyl(.09, .09, 2.8), Color(.28, .16, .34), Vector3(0, 0, 1.4)).rotation.x = PI / 2
+	var club = part(arm, sph(.62), Color(.31, .78, .34), Vector3(0, 0, 2.8))
+	club.scale.z = 2.4
+	for i in 18:
+		var a = i * 2.4
+		part(club, sph(.06), Color(.95, .72, .18), Vector3(cos(a) * .6, sin(a) * .6, ((i % 9) - 4) * .12)).scale.z = .5
+	return {"root": r, "arm": arm, "club": club.material_override, "robe": robe.material_override}
+
 static func external(r: Node3D, path: String, keep: Array, sc: float = 1.0) -> bool:
 	if not ResourceLoader.exists(path): return false
 	for c in r.get_children():

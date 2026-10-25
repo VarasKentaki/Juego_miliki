@@ -7,5 +7,7 @@ Este proyecto se escribió en un entorno SIN Godot instalado. Lo que sí se comp
 Lo que NO se comprobó (hay que probarlo al abrir en Godot 4.3+):
 - Que el proyecto abre sin errores del analizador de GDScript.
 - Cinemáticas (inicio, victoria, pepino, derrota) y su salto con Espacio/Intro/Esc/clic.
+- Segundo combate contra Galileo, Señor de la Huerta, y su diálogo del pitulín.
 - Onda de Pepino (R), calidad (G), cambio de armas, animaciones y rendimiento.
+- Selector visual de armas durante la introducción y exportación con `./export_web.sh`.
 Si aparece un error, copia el mensaje de la consola de Godot y se corrige.
