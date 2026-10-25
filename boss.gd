@@ -1,7 +1,7 @@
 class_name Boss extends Node3D
 var g
 var hp = 800.0; var st = "idle"; var t = 2.6; var an = ""; var w = 1.0; var hit = false; var ph = 1; var cb = false; var face = 0.0; var flash = 0.0
-var slide = 0.0; var recoil = 0.0; var step_t = 0.0
+var slide = 0.0; var recoil = 0.0; var step_t = 0.0; var pose_x = null
 var arm: Node3D; var body: Node3D; var club: StandardMaterial3D; var robe: StandardMaterial3D; var tele = {}
 
 func _ready():
@@ -13,7 +13,11 @@ func _ready():
 
 func reset():
 	hp = Cfg.B.hp; st = "idle"; t = 2.6; ph = 1; an = ""; cb = false; face = 0.0; position = Vector3(0, 0, -3)
-	body.rotation.z = 0; body.position.y = 0; robe.albedo_color = Color(.12, .23, .17); robe.emission_enabled = false
+	pose_x = null; body.rotation.z = 0; body.position.y = 0; robe.albedo_color = Color(.12, .23, .17); robe.emission_enabled = false
+
+func stagger(d):
+	if st != "dead" and st != "trans":
+		st = "rec"; an = ""; t = d; slide = 0.0
 
 func turn(c, tg, r): return c + clamp(angle_difference(c, tg), -r, r)
 
@@ -104,11 +108,12 @@ func animate(dt):
 				tx = 0.0; ty = 1.7 if wd else -1.7
 			"embestida": tx = -.5 if wd else 0.0
 			_: tx = -1.6 if wd else .6
+	if pose_x != null: tx = pose_x
 	var rt = min(dt * (30.0 if st == "act" else 5.0), 1.0)
 	arm.rotation.x = lerpf(arm.rotation.x, tx, rt); arm.rotation.y = lerpf(arm.rotation.y, ty, rt)
 	body.position.y = lerpf(body.position.y, -1.2 if st == "dead" else 0.0, min(dt * 3.0, 1.0))
 	recoil = move_toward(recoil, 0.0, dt * 3.0); body.position.z = -recoil; body.rotation.x = -recoil * .25
-	body.rotation.z = lerpf(body.rotation.z, .9 if st == "dead" else 0.0, min(dt * 2.0, 1.0))
+	body.rotation.z = lerpf(body.rotation.z, .9 if st == "dead" else sin(Time.get_ticks_msec() * .004) * .025, min(dt * 2.0, 1.0))
 	club.emission_enabled = true
 	club.emission = Color.WHITE if flash > 0 else (Color(.7 * (1.0 - t / w), 0, 0) if st == "wind" else Color.BLACK)
 	for n in tele:

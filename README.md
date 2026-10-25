@@ -6,7 +6,15 @@ Soulslike de un solo jefe: Miliki contra Fuvu, guardián del pepino de Jimmy, pa
 2. Importa `project.godot` y pulsa F5. La primera vez Godot importa los sonidos.
 
 ## Controles
-WASD mover · ratón o ← → cámara · clic izq. ataque rápido · clic der. ataque pesado · Espacio esquivar · Mayús correr · Q fijar objetivo · F curarse · **1 / 2 / 3 cambiar de arma** · Esc pausa.
+WASD mover · R onda de pepino · G calidad · ratón o ← → cámara · clic izq. ataque rápido · clic der. ataque pesado · Espacio esquivar · Mayús correr · Q fijar objetivo · F curarse · **1 / 2 / 3 cambiar de arma** · Esc pausa.
+
+## Novedades de esta versión
+- **Cinemáticas** (se saltan con Espacio, Intro, Esc o clic): presentación del combate (solo la primera vez por sesión), victoria, **descubrimiento del Pepino de Galileo** y derrota.
+- **Pepino de Galileo** (objeto legendario): se consigue al vencer a Fuvu. Desbloquea +10 % de daño y la **Onda de Pepino** (tecla R): la barra dorada se llena al golpear (+8) y al recibir daño (+4); al 100 % lanza una onda que hace 90 de daño y deja a Fuvu aturdido 1,8 s.
+- **Animaciones**: ciclo de caminar con piernas y brazos, respiración, inclinación al correr, reacción al golpe, poses de victoria y derrota, balanceo de Fuvu.
+- **Escenario**: cielo y luna, seis vidrieras con luz de color, polvo y hojas cayendo.
+- **Calidad gráfica**: tecla G (baja / media / alta; sombras, SSAO, niebla volumétrica, brillo y MSAA). Se guarda.
+- **Icono y menú**: icono del proyecto (`icon.svg`), logo en la pantalla de inicio, botones con efecto y transiciones.
 
 ## Armas (cfg.gd)
 | Tecla | Arma | Carácter |
@@ -28,4 +36,4 @@ Si existen `models/miliki.glb` o `models/fuvu.glb`, el juego los usa en lugar de
 Proyecto → Exportar → Windows Desktop. Sin firma digital, SmartScreen puede avisar.
 
 ## Estado
-Sin probar dentro de Godot: pueden hacer falta correcciones menores.
+Sin probar dentro de Godot. Ver `documentation/PRUEBAS.md`.

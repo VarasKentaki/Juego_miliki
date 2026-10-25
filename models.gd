@@ -39,11 +39,14 @@ static func face(p: Node3D, y: float, z: float, s: float, eye: Color, glow: bool
 	part(p, box(.12 * s, .02 * s, .03 * s), Color(.23, .08, .06), Vector3(0, y - .12 * s, z + .02 * s))
 static func miliki() -> Dictionary:
 	var r = Node3D.new(); var skin = Color(.88, .7, .56); var tun = Color(.42, .48, .6)
+	var legs = []; var arms = []
 	for k in [-1, 1]:
-		part(r, cyl(.11, .1, .7), Color(.23, .2, .31), Vector3(.17 * k, .4, 0))
-		part(r, cyl(.13, .13, .22), Color(.16, .11, .07), Vector3(.17 * k, .1, .02))
-		part(r, cyl(.08, .07, .6), tun, Vector3(.38 * k, 1.15, 0)).rotation.z = .15 * k
-		part(r, sph(.075), skin, Vector3(.43 * k, .82, 0))
+		var lg = Node3D.new(); lg.position = Vector3(.17 * k, .75, 0); r.add_child(lg); legs.append(lg)
+		part(lg, cyl(.11, .1, .7), Color(.23, .2, .31), Vector3(0, -.35, 0))
+		part(lg, cyl(.13, .13, .22), Color(.16, .11, .07), Vector3(0, -.65, .02))
+		var am = Node3D.new(); am.position = Vector3(.38 * k, 1.42, 0); r.add_child(am); arms.append(am)
+		part(am, cyl(.08, .07, .6), tun, Vector3(0, -.28, 0))
+		part(am, sph(.075), skin, Vector3(.05 * k, -.6, 0))
 		part(r, sph(.12), Color(.54, .56, .6), Vector3(.34 * k, 1.4, 0))
 	part(r, cyl(.27, .33, .8), tun, Vector3(0, 1.05, 0))
 	part(r, cyl(.34, .34, .09), Color(.48, .35, .16), Vector3(0, .72, 0))
@@ -58,8 +61,8 @@ static func miliki() -> Dictionary:
 	face(r, 1.68, .225, 1.0, Color(.23, .16, .1), false)
 	var sw = Node3D.new(); sw.position = Vector3(.5, 1.1, .2); r.add_child(sw)
 	if external(r, "res://models/miliki.glb", [sw, cape, tail], Cfg.EXT.miliki):
-		cape.visible = false; tail.visible = false
-	return {"root": r, "sword": sw, "cape": cape, "tail": tail}
+		cape.visible = false; tail.visible = false; legs = []; arms = []
+	return {"root": r, "sword": sw, "cape": cape, "tail": tail, "legs": legs, "arms": arms}
 static func fuvu() -> Dictionary:
 	var r = Node3D.new(); var rc = Color(.12, .23, .17)
 	var body = part(r, cone(1.15, 3.0), rc, Vector3(0, 1.5, 0))
@@ -119,3 +122,18 @@ static func weapon(n: String) -> Node3D:
 	var tr = CPUParticles3D.new(); tr.name = "Trail"; tr.amount = 28; tr.lifetime = .28; tr.local_coords = false; tr.emitting = false
 	tr.initial_velocity_max = .4; tr.gravity = Vector3.ZERO; tr.mesh = sph(.045); tr.material_override = mat(col, col); tr.position = tip; w.add_child(tr)
 	return w
+
+static func pepino(rich: bool = true) -> Node3D:
+	var n = Node3D.new(); var gc = Color(.31, .62, .22)
+	var body = part(n, sph(.3), gc, Vector3.ZERO, Color(.05, .25, .03)); body.scale = Vector3(.55, 1.5, .55)
+	for i in 14:
+		var a = i * 2.4
+		part(body, sph(.03), Color(.18, .42, .16), Vector3(cos(a), ((i % 7) - 3) / 3.5, sin(a)).normalized() * .3)
+	part(n, cyl(.03, .04, .14), Color(.25, .4, .12), Vector3(0, .5, 0))
+	part(n, cone(.09, .22), Color(.3, .65, .25), Vector3(.08, .5, 0)).rotation.z = -1.2
+	var h = part(n, tor(.5, .56), Color(1, .85, .3), Vector3.ZERO, Color(1, .75, .2)); h.rotation.x = .5; h.name = "Halo"
+	var sp = CPUParticles3D.new(); sp.amount = 30; sp.lifetime = 1.2; sp.local_coords = false; sp.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE; sp.emission_sphere_radius = .4
+	sp.gravity = Vector3(0, .6, 0); sp.initial_velocity_max = .3; sp.mesh = sph(.03); sp.material_override = mat(Color(1, .9, .4), Color(1, .85, .3)); n.add_child(sp)
+	if rich:
+		var l = OmniLight3D.new(); l.light_color = Color(.6, 1, .4); l.light_energy = 2.5; l.omni_range = 7.0; n.add_child(l)
+	return n

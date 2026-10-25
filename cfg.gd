@@ -2,6 +2,7 @@ class_name Cfg
 # Todo el equilibrio vive aquí.
 const ARENA = 8.5
 const P = {"hp":100.0,"st":100.0,"rec":30.0,"dly":0.7,"spd":5.0,"spr":8.0,"dcost":20.0,"dt":0.45,"i0":0.03,"i1":0.36,"dspd":11.0,"fl":3,"heal":40.0,"ht":1.1}
+const SPECIAL = {"d":90.0,"gain_hit":8.0,"gain_hurt":4.0}
 const EXT = {"miliki":1.0,"fuvu":1.5}
 const W = {
 "espada":{"name":"Espada de Miliki","spd":1.0,"arc":1.1,"col":[1.0,.95,.75],

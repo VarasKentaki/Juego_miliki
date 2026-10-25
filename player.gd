@@ -5,12 +5,14 @@ var face = PI; var act = ""; var at = 0.0; var hit = false; var dir = Vector3.ZE
 var sword: Node3D; var body: Node3D; var slash: MeshInstance3D
 var weapon = "espada"; var wnode: Node3D; var trail; var cape: Node3D; var tail: Node3D
 var vel = Vector3.ZERO; var kb = Vector3.ZERO; var cape_a = .1; var cape_v = 0.0
+var legs = []; var arms = []; var walk_ph = 0.0; var pose = ""; var meter = 0.0; var pep_hold: Node3D; var hurt_t = 0.0
 
 func _ready():
-	var m = Models.miliki(); body = m.root; sword = m.sword; cape = m.cape; tail = m.tail; add_child(body)
+	var m = Models.miliki(); body = m.root; sword = m.sword; cape = m.cape; tail = m.tail; legs = m.legs; arms = m.arms; add_child(body)
 	slash = MeshInstance3D.new(); slash.mesh = Models.sector(1.0, 1.1); slash.material_override = Models.flat(Color(1, .95, .75, .7))
 	slash.position.y = .9; slash.visible = false; add_child(slash)
 	set_weapon("espada")
+	pep_hold = Models.pepino(false); pep_hold.scale = Vector3.ONE * .4; pep_hold.position = Vector3(0, 0, .5); pep_hold.visible = false; sword.add_child(pep_hold)
 
 func wd(): return Cfg.W[weapon]
 
@@ -25,7 +27,7 @@ func switch(n):
 		set_weapon(n); g.say(wd().name)
 
 func reset():
-	vel = Vector3.ZERO; kb = Vector3.ZERO
+	vel = Vector3.ZERO; kb = Vector3.ZERO; pose = ""; meter = 0.0; hurt_t = 0.0; body.rotation.z = 0.0
 	hp = Cfg.P.hp; st = Cfg.P.st; fl = Cfg.P.fl; act = ""; position = Vector3(0, 0, 6); face = PI; lock = true
 
 func use(c) -> bool:
@@ -48,12 +50,15 @@ func try_act(k):
 		var v = inp(); dir = v if v != Vector3.ZERO else -Vector3(sin(face), 0, cos(face))
 	elif k == "F":
 		if fl < 1 or hp >= Cfg.P.hp: return
+	elif k == "S":
+		if g.seed_bonus < 1 or meter < 100.0: return
+		meter = 0.0; hit = false
 	else:
 		if not use(wd()[k].c): return
 		if lock: face = to_boss()
 		hit = false; vel = Vector3(sin(face), 0, cos(face)) * 3.5
 	act = k; at = 0.0
-	g.sfx({"D": "dodge", "L": "swing_l", "H": "swing_h"}.get(k, ""))
+	g.sfx({"D": "dodge", "L": "swing_l", "H": "swing_h", "S": "special"}.get(k, ""))
 
 func invuln() -> bool:
 	return act == "D" and at >= Cfg.P.i0 and at <= Cfg.P.i1
@@ -61,13 +66,18 @@ func invuln() -> bool:
 func hurt(dm) -> bool:
 	if invuln(): return false
 	hp = max(0.0, hp - dm); act = ""; g.shake = .5; g.hs = .07; g.sfx("hurt")
-	var aw = position - g.boss.position; aw.y = 0; kb = aw.normalized() * 7.0; vel = Vector3.ZERO; cape_v += 6.0
+	var aw = position - g.boss.position; aw.y = 0; kb = aw.normalized() * 7.0; vel = Vector3.ZERO; cape_v += 6.0; hurt_t = 1.0; meter = min(100.0, meter + Cfg.SPECIAL.gain_hurt)
 	g.burst(position + Vector3(0, 1.2, 0), Color(.75, .1, .1), 14); return true
 
 func strike(d):
 	var b = g.boss.position; var dx = b.x - position.x; var dz = b.z - position.z
 	if sqrt(dx * dx + dz * dz) - Cfg.B.rad > d.r or abs(angle_difference(face, atan2(dx, dz))) > wd().arc: return
-	hit = true; g.boss.take_hit(d.d, position)
+	hit = true; g.boss.take_hit(d.d, position); meter = min(100.0, meter + Cfg.SPECIAL.gain_hit)
+
+func special_hit():
+	var b = g.boss.position; var dx = b.x - position.x; var dz = b.z - position.z
+	if sqrt(dx * dx + dz * dz) < 13.0 and abs(angle_difference(face, atan2(dx, dz))) < .7:
+		g.boss.take_hit(Cfg.SPECIAL.d, position); g.boss.stagger(1.8)
 
 func step(dt):
 	st_t -= dt
@@ -82,6 +92,10 @@ func step(dt):
 		elif act == "F":
 			if at >= Cfg.P.ht:
 				fl -= 1; hp = min(Cfg.P.hp, hp + Cfg.P.heal); act = ""; g.say("Un sorbo de té de menta."); g.sfx("heal")
+		elif act == "S":
+			if not hit and at >= .6:
+				hit = true; g.wave(self); special_hit()
+			if at >= 1.3: act = ""
 		else:
 			var d = wd()[act]; position += vel * dt; vel = vel.move_toward(Vector3.ZERO, 14.0 * dt)
 			if not hit and at >= d.a and at <= d.b: strike(d)
@@ -114,9 +128,22 @@ func animate(dt):
 			slash.visible = true; slash.scale = Vector3.ONE * d.r
 			var cc = wd().col; slash.material_override.albedo_color = Color(cc[0], cc[1], cc[2], (.9 if act == "H" else .6) * (1.0 - k))
 	elif act == "F": rx = -.8
+	elif act == "S": rx = -2.4
 	sword.rotation.x = rx
 	body.scale.y = .6 if act == "D" else 1.0
 	body.visible = not (invuln() and int(at * 40) % 2 == 1)
 	var tg = .12 + clamp(vel.length() * .09, 0.0, .8) + sin(Time.get_ticks_msec() * .004) * .04
 	cape_v += ((tg - cape_a) * 70.0 - cape_v * 7.0) * dt; cape_a += cape_v * dt
 	cape.rotation.x = cape_a; tail.rotation.x = cape_a * 1.3 + sin(Time.get_ticks_msec() * .006) * .1
+	var sp2 = vel.length() if act == "" else 0.0; var amp = clamp(sp2 / 5.0, 0.0, 1.0); var tm = Time.get_ticks_msec() * .001
+	walk_ph += sp2 * dt * 1.9
+	if legs.size() == 2:
+		legs[0].rotation.x = sin(walk_ph) * .75 * amp; legs[1].rotation.x = -sin(walk_ph) * .75 * amp
+		arms[0].rotation.x = -sin(walk_ph) * .6 * amp; arms[1].rotation.x = sin(walk_ph) * .25 * amp
+	body.position.y = abs(sin(walk_ph)) * .06 * amp + sin(tm * 2.0) * .01
+	body.rotation.x = lerpf(body.rotation.x, amp * .12 - hurt_t * .5, min(dt * 10.0, 1.0)); hurt_t = max(0.0, hurt_t - dt * 3.0)
+	wnode.visible = act != "S"; pep_hold.visible = act == "S"
+	if pose == "win":
+		sword.rotation.x = -2.6; body.position.y = abs(sin(tm * 7.0)) * .15
+	elif pose == "lose":
+		body.rotation.z = lerpf(body.rotation.z, 1.45, min(dt * 4.0, 1.0)); body.position.y = lerpf(body.position.y, .1, min(dt * 4.0, 1.0))
